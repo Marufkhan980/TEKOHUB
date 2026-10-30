@@ -1,0 +1,101 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A gadget or accessory in the TekoHub store catalog",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Product display title"
+        },
+        "category": {
+          "type": "string",
+          "description": "Product category identifier"
+        },
+        "price": {
+          "type": "number",
+          "description": "Selling price in BDT"
+        },
+        "originalPrice": {
+          "type": "number",
+          "description": "Original retail price in BDT before discount"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Average review rating"
+        },
+        "reviews": {
+          "type": "number",
+          "description": "Count of customer reviews"
+        },
+        "image": {
+          "type": "string",
+          "description": "Product image URL, Google Drive preview link, or asset path"
+        },
+        "badge": {
+          "type": "string",
+          "description": "Promotional tag like Bestseller or Hot Deal"
+        },
+        "inStock": {
+          "type": "boolean",
+          "description": "Inventory stock availability flag"
+        },
+        "warranty": {
+          "type": "string",
+          "description": "Warranty description"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed product description"
+        },
+        "features": {
+          "type": "array",
+          "description": "Key bullet points of the product"
+        },
+        "colors": {
+          "type": "array",
+          "description": "Available color variants"
+        }
+      },
+      "required": ["name", "price", "image", "category"]
+    },
+    "StoreConfig": {
+      "title": "StoreConfig",
+      "description": "Store contact details and external links",
+      "type": "object",
+      "properties": {
+        "storeName": {
+          "type": "string",
+          "description": "Brand display name"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Customer service phone"
+        },
+        "whatsappNumber": {
+          "type": "string",
+          "description": "WhatsApp business contact number"
+        },
+        "facebookUrl": {
+          "type": "string",
+          "description": "Facebook Page or Messenger link"
+        },
+        "facebookName": {
+          "type": "string",
+          "description": "Facebook page display handle"
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Store products readable by public, writable only by authenticated admin"
+    },
+    "/store_config/{configId}": {
+      "schema": "StoreConfig",
+      "description": "Store contact settings readable by public, writable only by authenticated admin"
+    }
+  }
+}

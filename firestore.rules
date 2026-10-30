@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Only the verified store owner (marufkhan54443@gmail.com) can write/delete
+    function isStoreOwner() {
+      return request.auth != null && 
+             request.auth.token.email == 'marufkhan54443@gmail.com';
+    }
+
+    // Products collection:
+    // Public customers can read products freely to browse and order.
+    // Strictly ONLY marufkhan54443@gmail.com can create, update, or delete products.
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isStoreOwner();
+    }
+
+    // Store configurations collection:
+    // Public customers can read configurations (contacts, banner, etc).
+    // Strictly ONLY marufkhan54443@gmail.com can write or modify settings.
+    match /store_config/{configId} {
+      allow read: if true;
+      allow write: if isStoreOwner();
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "TEKOHUB - Smart Gadget Store & Google Sites Embed",
+  "description": "Minimal gadget store with bKash, Nagad, Rocket send-money checkout, WhatsApp order integration, and Google Sites custom embed script generator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
