@@ -21,11 +21,16 @@ import {
   ListChecks,
   Sliders,
   Layers,
-  CheckCircle
+  CheckCircle,
+  Settings,
+  Phone,
+  CreditCard,
+  Truck
 } from 'lucide-react';
 import { Product, StoreConfig } from '../types';
 import { convertGoogleDriveUrl, isValidImageUrl } from '../utils/imageUrl';
 import { saveProductToFirestore, deleteProductFromFirestore, seedProductsToFirestore } from '../lib/productsService';
+import { saveStoreConfigToFirestore } from '../lib/configService';
 import { generateGoogleSitesEmbedHtml } from '../utils/embedGenerator';
 
 interface ProductManagerModalProps {
@@ -36,6 +41,7 @@ interface ProductManagerModalProps {
   editingProductId?: string | null;
   onClearEditingProductId?: () => void;
   config: StoreConfig;
+  onUpdateConfig?: (newConfig: StoreConfig) => void;
 }
 
 export const ProductManagerModal: React.FC<ProductManagerModalProps> = ({
@@ -45,11 +51,12 @@ export const ProductManagerModal: React.FC<ProductManagerModalProps> = ({
   onUpdateProducts,
   editingProductId,
   onClearEditingProductId,
-  config
+  config,
+  onUpdateConfig
 }) => {
   if (!isOpen) return null;
 
-  const [activeTab, setActiveTab] = useState<'products' | 'embed'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'embed' | 'settings'>('products');
   const [activeView, setActiveView] = useState<'list' | 'editor'>('list');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -58,6 +65,78 @@ export const ProductManagerModal: React.FC<ProductManagerModalProps> = ({
   const [isSeeding, setIsSeeding] = useState(false);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
+
+  // Store Settings & Payment Account states (synced to Firestore!)
+  const [storeName, setStoreName] = useState(config.storeName || 'TEKOHUB');
+  const [storePhone, setStorePhone] = useState(config.phone || '01572923121');
+  const [storeWhatsapp, setStoreWhatsapp] = useState(config.whatsappNumber || '8801572923121');
+  const [storeAddress, setStoreAddress] = useState(config.address || 'Aftabnogor, Dhaka, Bangladesh');
+  const [storeBkash, setStoreBkash] = useState(config.bkashNumber || '01572923121');
+  const [storeBkashType, setStoreBkashType] = useState<'Personal' | 'Merchant'>(config.bkashType || 'Personal');
+  const [storeNagad, setStoreNagad] = useState(config.nagadNumber || '01572923121');
+  const [storeNagadType, setStoreNagadType] = useState<'Personal' | 'Merchant'>(config.nagadType || 'Personal');
+  const [storeRocket, setStoreRocket] = useState(config.rocketNumber || '01572923121-0');
+  const [storeRocketType, setStoreRocketType] = useState<'Personal' | 'Merchant'>(config.rocketType || 'Personal');
+  const [storeDeliveryDhaka, setStoreDeliveryDhaka] = useState<number>(config.deliveryDhaka || 60);
+  const [storeDeliveryOutside, setStoreDeliveryOutside] = useState<number>(config.deliveryOutside || 120);
+  const [storeFreeThreshold, setStoreFreeThreshold] = useState<number>(config.freeDeliveryThreshold || 3500);
+  const [storeFacebookUrl, setStoreFacebookUrl] = useState<string>(config.facebookUrl || 'https://www.facebook.com/tekohub99/');
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+
+  // Keep store settings in sync when config prop changes from Firestore
+  React.useEffect(() => {
+    if (config) {
+      setStoreName(config.storeName || 'TEKOHUB');
+      setStorePhone(config.phone || '01572923121');
+      setStoreWhatsapp(config.whatsappNumber || '8801572923121');
+      setStoreAddress(config.address || 'Aftabnogor, Dhaka, Bangladesh');
+      setStoreBkash(config.bkashNumber || '01572923121');
+      setStoreBkashType(config.bkashType || 'Personal');
+      setStoreNagad(config.nagadNumber || '01572923121');
+      setStoreNagadType(config.nagadType || 'Personal');
+      setStoreRocket(config.rocketNumber || '01572923121-0');
+      setStoreRocketType(config.rocketType || 'Personal');
+      setStoreDeliveryDhaka(config.deliveryDhaka || 60);
+      setStoreDeliveryOutside(config.deliveryOutside || 120);
+      setStoreFreeThreshold(config.freeDeliveryThreshold || 3500);
+      setStoreFacebookUrl(config.facebookUrl || 'https://www.facebook.com/tekohub99/');
+    }
+  }, [config]);
+
+  const handleSaveStoreConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingConfig(true);
+    const updatedConfig: StoreConfig = {
+      ...config,
+      storeName: storeName.trim() || 'TEKOHUB',
+      phone: storePhone.trim() || '01572923121',
+      whatsappNumber: storeWhatsapp.trim() || '8801572923121',
+      address: storeAddress.trim(),
+      bkashNumber: storeBkash.trim(),
+      bkashType: storeBkashType,
+      nagadNumber: storeNagad.trim(),
+      nagadType: storeNagadType,
+      rocketNumber: storeRocket.trim(),
+      rocketType: storeRocketType,
+      deliveryDhaka: Number(storeDeliveryDhaka),
+      deliveryOutside: Number(storeDeliveryOutside),
+      freeDeliveryThreshold: Number(storeFreeThreshold),
+      facebookUrl: storeFacebookUrl.trim()
+    };
+
+    try {
+      await saveStoreConfigToFirestore(updatedConfig);
+      if (onUpdateConfig) {
+        onUpdateConfig(updatedConfig);
+      }
+      setIsSavingConfig(false);
+      showToast('Payment Numbers & Delivery Charges saved to Firebase Firestore! Live on Vercel & Google Sites.');
+    } catch (err: any) {
+      setIsSavingConfig(false);
+      console.error('Failed to save store settings:', err);
+      showToast(`Error saving settings: ${err.message || 'Permission denied'}`);
+    }
+  };
 
   // Form states for creating / editing
   const [formId, setFormId] = useState('');
@@ -435,6 +514,17 @@ export const ProductManagerModal: React.FC<ProductManagerModalProps> = ({
             <Code2 className="w-3.5 h-3.5" />
             <span>Google Sites Embed Code (Clean Client-Only)</span>
           </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`pb-3 px-4 text-xs font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'settings'
+                ? 'border-orange-600 text-orange-600'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>Store &amp; Payment Settings (বিকাশ, নগদ, ডেলিভারি চার্জ)</span>
+          </button>
         </div>
 
         {/* Toast alert */}
@@ -446,7 +536,236 @@ export const ProductManagerModal: React.FC<ProductManagerModalProps> = ({
 
         {/* Body Content */}
         <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
-          {activeTab === 'embed' ? (
+          {activeTab === 'settings' ? (
+            /* Tab: Store Settings (bKash, Nagad, Delivery Charges) */
+            <form onSubmit={handleSaveStoreConfig} className="space-y-4">
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl space-y-1.5">
+                <h3 className="text-sm font-bold text-orange-950 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-orange-600" />
+                  <span>Firebase Cloud Payment &amp; Delivery Settings</span>
+                </h3>
+                <p className="text-xs text-orange-900 leading-relaxed">
+                  এখানে বিকাশ, নগদ, রকেট নম্বর ও ডেলিভারি চার্জ পরিবর্তন করে <b>"Save Store Settings to Firebase Firestore"</b> বাটনে চাপলে সেটি সরাসরি ক্লাউড ডাটাবেসে সেভ হবে। এর ফলে <b>Vercel, Google Sites, এবং সকল কাস্টমারের মোবাইলে</b> রিয়েল-টাইমে সঠিক নম্বর ও চার্জ প্রদর্শিত হবে!
+                </p>
+              </div>
+
+              {/* Section: Mobile Financial Services (bKash, Nagad, Rocket) */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-orange-600" />
+                  <span>Payment Accounts (MFS Send Money)</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* bKash */}
+                  <div className="bg-white p-3 rounded-xl border border-pink-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#E2136E]">bKash Number</span>
+                      <select
+                        value={storeBkashType}
+                        onChange={(e) => setStoreBkashType(e.target.value as any)}
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-50 border border-pink-200 text-pink-700"
+                      >
+                        <option value="Personal">Personal</option>
+                        <option value="Merchant">Merchant</option>
+                      </select>
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={storeBkash}
+                      onChange={(e) => setStoreBkash(e.target.value)}
+                      placeholder="01XXXXXXXXX"
+                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500/20"
+                    />
+                  </div>
+
+                  {/* Nagad */}
+                  <div className="bg-white p-3 rounded-xl border border-orange-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#EA580C]">Nagad Number</span>
+                      <select
+                        value={storeNagadType}
+                        onChange={(e) => setStoreNagadType(e.target.value as any)}
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-50 border border-orange-200 text-orange-700"
+                      >
+                        <option value="Personal">Personal</option>
+                        <option value="Merchant">Merchant</option>
+                      </select>
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={storeNagad}
+                      onChange={(e) => setStoreNagad(e.target.value)}
+                      placeholder="01XXXXXXXXX"
+                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                    />
+                  </div>
+
+                  {/* Rocket */}
+                  <div className="bg-white p-3 rounded-xl border border-purple-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#9333EA]">Rocket Number</span>
+                      <select
+                        value={storeRocketType}
+                        onChange={(e) => setStoreRocketType(e.target.value as any)}
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 border border-purple-200 text-purple-700"
+                      >
+                        <option value="Personal">Personal</option>
+                        <option value="Merchant">Merchant</option>
+                      </select>
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={storeRocket}
+                      onChange={(e) => setStoreRocket(e.target.value)}
+                      placeholder="01XXXXXXXXX-0"
+                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Delivery Charges */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-orange-600" />
+                  <span>Delivery Charges &amp; Free Delivery Policy</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Inside Dhaka Delivery (৳)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={storeDeliveryDhaka}
+                      onChange={(e) => setStoreDeliveryDhaka(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-900"
+                    />
+                    <span className="text-[10px] text-slate-400">24-48 Hours Express</span>
+                  </div>
+
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Outside Dhaka Delivery (৳)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={storeDeliveryOutside}
+                      onChange={(e) => setStoreDeliveryOutside(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-900"
+                    />
+                    <span className="text-[10px] text-slate-400">Steadfast (48-72 Hours)</span>
+                  </div>
+
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Free Delivery Minimum (৳)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={storeFreeThreshold}
+                      onChange={(e) => setStoreFreeThreshold(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-900"
+                    />
+                    <span className="text-[10px] text-slate-400">Free delivery for cart &ge; this</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section: Contact & Brand Hotline */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-orange-600" />
+                  <span>Contact Lines &amp; Social Links</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Store Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={storeName}
+                      onChange={(e) => setStoreName(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Hotline Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={storePhone}
+                      onChange={(e) => setStorePhone(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      WhatsApp Order Number (with 88 e.g. 8801572923121)
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={storeWhatsapp}
+                      onChange={(e) => setStoreWhatsapp(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Facebook Page URL
+                    </label>
+                    <input
+                      type="text"
+                      value={storeFacebookUrl}
+                      onChange={(e) => setStoreFacebookUrl(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Store Location / Address
+                    </label>
+                    <input
+                      type="text"
+                      value={storeAddress}
+                      onChange={(e) => setStoreAddress(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                <button
+                  type="submit"
+                  disabled={isSavingConfig}
+                  className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md shadow-orange-600/20 flex items-center gap-2 cursor-pointer transition-all"
+                >
+                  {isSavingConfig ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Save Store Settings to Firebase Firestore</span>
+                </button>
+              </div>
+            </form>
+          ) : activeTab === 'embed' ? (
             /* Tab: Google Sites Embed Generator */
             <div className="space-y-4">
               <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl space-y-2">

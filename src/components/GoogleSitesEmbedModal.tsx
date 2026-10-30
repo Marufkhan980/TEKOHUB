@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Product, StoreConfig } from '../types';
 import { generateGoogleSitesEmbedHtml } from '../utils/embedGenerator';
+import { saveStoreConfigToFirestore } from '../lib/configService';
 
 interface GoogleSitesEmbedModalProps {
   isOpen: boolean;
@@ -42,6 +43,21 @@ export const GoogleSitesEmbedModal: React.FC<GoogleSitesEmbedModalProps> = ({
   const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
   const [scriptSuccessMessage, setScriptSuccessMessage] = useState<string | null>(null);
   const [scriptErrorMessage, setScriptErrorMessage] = useState<string | null>(null);
+  const [isSavingConfigToFirestore, setIsSavingConfigToFirestore] = useState(false);
+  const [configSaveSuccess, setConfigSaveSuccess] = useState<string | null>(null);
+
+  const handleSaveConfigCloud = async () => {
+    setIsSavingConfigToFirestore(true);
+    try {
+      await saveStoreConfigToFirestore(config);
+      setIsSavingConfigToFirestore(false);
+      setConfigSaveSuccess('Synced to Firebase Firestore! Live on Vercel.');
+      setTimeout(() => setConfigSaveSuccess(null), 3500);
+    } catch (e: any) {
+      setIsSavingConfigToFirestore(false);
+      alert('Error saving to Firestore: ' + (e.message || 'Permission denied'));
+    }
+  };
 
   // Raw script JSON representation
   const initialJson = JSON.stringify(
@@ -819,9 +835,23 @@ export const GoogleSitesEmbedModal: React.FC<GoogleSitesEmbedModalProps> = ({
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-100 rounded-lg text-xs text-slate-600">
-                ✅ Settings &amp; social media channels are automatically saved and updated in the embed script.
+              <div className="p-3 bg-slate-100 rounded-lg text-xs text-slate-600 flex flex-col sm:flex-row items-center justify-between gap-2">
+                <span>✅ Settings &amp; payment numbers will be synchronized to Firestore &amp; embed script.</span>
+                <button
+                  type="button"
+                  onClick={handleSaveConfigCloud}
+                  disabled={isSavingConfigToFirestore}
+                  className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{isSavingConfigToFirestore ? 'Syncing...' : 'Sync to Firebase Firestore'}</span>
+                </button>
               </div>
+              {configSaveSuccess && (
+                <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-bold text-emerald-700 text-center">
+                  {configSaveSuccess}
+                </div>
+              )}
             </div>
           )}
         </div>

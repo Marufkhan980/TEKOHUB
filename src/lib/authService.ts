@@ -13,15 +13,14 @@ export { auth };
  * Reads the verified store owner email dynamically from environment variables
  */
 export const getAuthorizedAdminEmail = (): string => {
-  return (import.meta.env.VITE_ADMIN_EMAIL || '').trim().toLowerCase();
+  return (import.meta.env.VITE_ADMIN_EMAIL || 'marufkhan54443@gmail.com').trim().toLowerCase();
 };
 
-export const AUTHORIZED_ADMIN_EMAIL: string = (import.meta.env.VITE_ADMIN_EMAIL || '').trim();
+export const AUTHORIZED_ADMIN_EMAIL: string = (import.meta.env.VITE_ADMIN_EMAIL || 'marufkhan54443@gmail.com').trim();
 
 export function isAuthorizedAdmin(email: string | null | undefined): boolean {
   if (!email) return false;
   const configured = getAuthorizedAdminEmail();
-  if (!configured) return false;
   return email.trim().toLowerCase() === configured;
 }
 

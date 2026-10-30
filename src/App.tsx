@@ -15,6 +15,7 @@ import { AdminLoginModal } from './components/AdminLoginModal';
 import { Footer } from './components/Footer';
 import { generateGoogleSitesEmbedHtml } from './utils/embedGenerator';
 import { subscribeToProducts } from './lib/productsService';
+import { subscribeToStoreConfig, saveStoreConfigToFirestore } from './lib/configService';
 import { onAdminAuthChange, logoutAdmin, isAuthorizedAdmin } from './lib/authService';
 import {
   MessageCircle,
@@ -28,7 +29,8 @@ import {
   Lock,
   Unlock,
   Loader2,
-  Database
+  Database,
+  Settings
 } from 'lucide-react';
 
 export default function App() {
@@ -36,7 +38,7 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>(DEFAULT_PRODUCTS);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
-  // Store config state
+  // Store config state (synced with Firebase Firestore in real-time!)
   const [config, setConfig] = useState<StoreConfig>(() => {
     try {
       const saved = localStorage.getItem('tekohub_config');
@@ -44,13 +46,7 @@ export default function App() {
         const parsed = JSON.parse(saved);
         return {
           ...DEFAULT_STORE_CONFIG,
-          ...parsed,
-          phone: '01572923121',
-          whatsappNumber: '8801572923121',
-          address: 'Aftabnogor, Dhaka, Bangladesh',
-          bannerImage: (!parsed.bannerImage || parsed.bannerImage.includes('Smart_Gadgets__Better_Life'))
-            ? '/assets/aistudio/tekohub_banner_fast.webp'
-            : parsed.bannerImage
+          ...parsed
         };
       }
     } catch (e) {
@@ -109,6 +105,19 @@ export default function App() {
     const unsubscribe = subscribeToProducts((loaded) => {
       setProducts(loaded);
       setIsLoadingProducts(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Real-time Firestore subscription for store configurations (bKash, Nagad, Rocket, delivery charges)
+  useEffect(() => {
+    const unsubscribe = subscribeToStoreConfig((liveConfig) => {
+      setConfig(liveConfig);
+      try {
+        localStorage.setItem('tekohub_config', JSON.stringify(liveConfig));
+      } catch (e) {
+        console.error(e);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -551,6 +560,7 @@ export default function App() {
           editingProductId={editingProductId}
           onClearEditingProductId={() => setEditingProductId(null)}
           config={config}
+          onUpdateConfig={setConfig}
         />
       )}
 
