@@ -1,20 +1,16 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# TekoHub - Smart Gadget Store
 
-# Run and deploy your AI Studio app
+Welcome to TekoHub, your ultimate destination for smart gadgets and accessories. 
 
-This contains everything you need to run your app locally.
+## About Us
+We provide 100% authentic gadgets at the best prices in Bangladesh. From premium TWS earbuds and smartwatches to chargers and gaming accessories, we bring you the latest tech to upgrade your lifestyle.
 
-View your app in AI Studio: https://ai.studio/apps/c0c91e9a-8e6d-4324-b34c-df3ad259b7de
+## What We Offer
+- **Genuine Products:** 100% authentic gadgets with official warranties.
+- **Fast Delivery:** Inside Dhaka (24h) and Outside Dhaka (2-3 days).
+- **Easy Checkout:** Order directly via WhatsApp or Facebook Messenger.
+- **Payment Options:** bKash, Nagad, Rocket, and Cash on Delivery.
 
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Connect With Us
+- **Facebook:** [TekoHub](https://www.facebook.com/tekohub99)
+- **WhatsApp:** 01572923121
