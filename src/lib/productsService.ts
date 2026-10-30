@@ -33,10 +33,16 @@ export function subscribeToProducts(
         const loaded: Product[] = [];
         snapshot.forEach((docSnap) => {
           const data = docSnap.data() as Product;
+          const mainImg = convertGoogleDriveUrl(data.image || '');
+          const gallery = (data.gallery && data.gallery.length > 0)
+            ? data.gallery.map(convertGoogleDriveUrl)
+            : [mainImg];
+
           loaded.push({
             ...data,
             id: docSnap.id,
-            image: convertGoogleDriveUrl(data.image || '')
+            image: mainImg,
+            gallery
           });
         });
         onSuccess(loaded);
@@ -58,10 +64,23 @@ export function subscribeToProducts(
  */
 export async function saveProductToFirestore(product: Product): Promise<void> {
   const cleanImage = convertGoogleDriveUrl(product.image);
-  const toSave: Product = {
+  const cleanGallery =
+    product.gallery && product.gallery.length > 0
+      ? product.gallery.map((url) => convertGoogleDriveUrl(url))
+      : [cleanImage];
+
+  const toSave: Record<string, any> = {
     ...product,
-    image: cleanImage
+    image: cleanImage,
+    gallery: cleanGallery
   };
+
+  // Remove undefined fields so Firestore doesn't reject the write
+  Object.keys(toSave).forEach((key) => {
+    if (toSave[key] === undefined) {
+      delete toSave[key];
+    }
+  });
 
   const docRef = doc(db, PRODUCTS_COLLECTION, product.id);
   await setDoc(docRef, toSave, { merge: true });

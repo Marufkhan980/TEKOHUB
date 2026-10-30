@@ -16,7 +16,12 @@ import {
   Copy,
   ExternalLink,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Palette,
+  ListChecks,
+  Sliders,
+  Layers,
+  CheckCircle
 } from 'lucide-react';
 import { Product, StoreConfig } from '../types';
 import { convertGoogleDriveUrl, isValidImageUrl } from '../utils/imageUrl';
@@ -71,13 +76,119 @@ export const ProductManagerModal: React.FC<ProductManagerModalProps> = ({
   const [formSpecs, setFormSpecs] = useState<{ key: string; value: string }[]>([]);
   const [formColors, setFormColors] = useState<{ name: string; hex: string }[]>([]);
 
-  // New item helpers for arrays
   const [newFeatureText, setNewFeatureText] = useState('');
   const [newSpecKey, setNewSpecKey] = useState('');
   const [newSpecVal, setNewSpecVal] = useState('');
   const [newColorName, setNewColorName] = useState('');
   const [newColorHex, setNewColorHex] = useState('#0f172a');
   const [newGalleryUrl, setNewGalleryUrl] = useState('');
+
+  // Presets for fast 1-click addition
+  const COLOR_PRESETS = [
+    { name: 'Space Black', hex: '#0f172a' },
+    { name: 'Pure White', hex: '#ffffff' },
+    { name: 'Crystal Green', hex: '#10b981' },
+    { name: 'Ice Blue', hex: '#38bdf8' },
+    { name: 'Deep Purple', hex: '#6366f1' },
+    { name: 'Sunset Orange', hex: '#f97316' },
+    { name: 'Metallic Silver', hex: '#94a3b8' },
+    { name: 'Rose Gold', hex: '#fb7185' },
+    { name: 'Midnight Blue', hex: '#1e3a8a' },
+    { name: 'Crimson Red', hex: '#ef4444' }
+  ];
+
+  const FEATURE_SUGGESTIONS = [
+    'Active Noise Cancellation (ENC) dual mics',
+    'Bluetooth 5.3 instant auto-pairing',
+    'Up to 24 hours total playtime with case',
+    'Touch controls for music and call answering',
+    'Digital LED power display on charging case',
+    'IPX4 splashproof & sweat resistant',
+    'Fast Type-C charging support (10 min charge = 2h play)',
+    'Deep bass acoustic dynamic driver',
+    'Ergonomic comfortable lightweight in-ear fit',
+    'Voice assistant (Siri & Google Assistant) support'
+  ];
+
+  const SPEC_SUGGESTIONS = [
+    { key: 'Driver Size', value: '13mm Titanium Dynamic' },
+    { key: 'Water Resistance', value: 'IPX4 Splashproof' },
+    { key: 'Bluetooth Version', value: '5.3 + EDR' },
+    { key: 'Charging Time', value: '1 hour Type-C Fast Charge' },
+    { key: 'Playtime', value: '5-6 hours per charge (24h with case)' },
+    { key: 'Battery Capacity', value: '300mAh Case / 35mAh Earbuds' },
+    { key: 'Transmission Range', value: '10 Meters' },
+    { key: 'Weight', value: '38g (Ultra Lightweight)' }
+  ];
+
+  // Handlers for Colors
+  const handleAddColor = (name = newColorName, hex = newColorHex) => {
+    if (!name.trim()) return;
+    setFormColors((prev) => [...prev, { name: name.trim(), hex }]);
+    setNewColorName('');
+  };
+
+  const handleRemoveColor = (index: number) => {
+    setFormColors((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateColor = (index: number, field: 'name' | 'hex', val: string) => {
+    setFormColors((prev) =>
+      prev.map((c, i) => (i === index ? { ...c, [field]: val } : c))
+    );
+  };
+
+  // Handlers for Features
+  const handleAddFeature = (text = newFeatureText) => {
+    if (!text.trim()) return;
+    setFormFeatures((prev) => [...prev, text.trim()]);
+    setNewFeatureText('');
+  };
+
+  const handleRemoveFeature = (index: number) => {
+    setFormFeatures((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateFeature = (index: number, val: string) => {
+    setFormFeatures((prev) =>
+      prev.map((f, i) => (i === index ? val : f))
+    );
+  };
+
+  // Handlers for Specs
+  const handleAddSpec = (key = newSpecKey, value = newSpecVal) => {
+    if (!key.trim() || !value.trim()) return;
+    setFormSpecs((prev) => [...prev, { key: key.trim(), value: value.trim() }]);
+    setNewSpecKey('');
+    setNewSpecVal('');
+  };
+
+  const handleRemoveSpec = (index: number) => {
+    setFormSpecs((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateSpec = (index: number, field: 'key' | 'value', val: string) => {
+    setFormSpecs((prev) =>
+      prev.map((s, i) => (i === index ? { ...s, [field]: val } : s))
+    );
+  };
+
+  // Handlers for Gallery
+  const handleAddGalleryPhoto = () => {
+    if (!newGalleryUrl.trim()) return;
+    const formatted = convertGoogleDriveUrl(newGalleryUrl.trim());
+    setFormGallery((prev) => [...prev, formatted]);
+    setNewGalleryUrl('');
+  };
+
+  const handleRemoveGalleryPhoto = (index: number) => {
+    setFormGallery((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSetPrimaryGalleryPhoto = (url: string) => {
+    setFormImage(url);
+    setFormGallery((prev) => [url, ...prev.filter((u) => u !== url)]);
+  };
 
   // If opened with a specific product to edit
   React.useEffect(() => {
@@ -689,6 +800,447 @@ export const ProductManagerModal: React.FC<ProductManagerModalProps> = ({
                     placeholder="e.g. 6 Months Replacement Warranty"
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   />
+                </div>
+              </div>
+
+              {/* 1. Colors & Variants Manager */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center">
+                      <Palette className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900">
+                        Available Colors & Swatches ({formColors.length})
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        গ্রাহকদের জন্য বিভিন্ন রঙের অপশন যোগ করুন।
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Color Presets */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Quick 1-Click Color Presets:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {COLOR_PRESETS.map((preset) => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={() => handleAddColor(preset.name, preset.hex)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-orange-50 border border-slate-200 hover:border-orange-300 rounded-lg text-xs font-medium text-slate-700 transition-colors cursor-pointer"
+                        title={`Click to add ${preset.name}`}
+                      >
+                        <span
+                          className="w-3 h-3 rounded-full border border-slate-300 shrink-0"
+                          style={{ backgroundColor: preset.hex }}
+                        />
+                        <span>{preset.name}</span>
+                        <Plus className="w-2.5 h-2.5 text-slate-400" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Color Input Bar */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1 border-t border-slate-200/60">
+                  <input
+                    type="text"
+                    value={newColorName}
+                    onChange={(e) => setNewColorName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddColor();
+                      }
+                    }}
+                    placeholder="Custom Color Name (e.g. Crystal Green, Space Black)"
+                    className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 bg-white px-2 py-1 border border-slate-200 rounded-lg">
+                      <input
+                        type="color"
+                        value={newColorHex}
+                        onChange={(e) => setNewColorHex(e.target.value)}
+                        className="w-6 h-6 rounded cursor-pointer border-0 p-0 bg-transparent"
+                        title="Pick Color"
+                      />
+                      <input
+                        type="text"
+                        value={newColorHex}
+                        onChange={(e) => setNewColorHex(e.target.value)}
+                        className="w-20 text-[11px] font-mono font-semibold text-slate-700 bg-transparent focus:outline-none"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAddColor()}
+                      className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-lg flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Color</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Current Colors List */}
+                {formColors.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic bg-white p-2.5 rounded-lg border border-dashed border-slate-200 text-center">
+                    No color variants added yet. Click one of the quick presets above or enter a color name to add.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    {formColors.map((color, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between gap-2 p-2 bg-white rounded-lg border border-slate-200 shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <input
+                            type="color"
+                            value={color.hex}
+                            onChange={(e) => handleUpdateColor(idx, 'hex', e.target.value)}
+                            className="w-6 h-6 rounded cursor-pointer border-0 p-0 shrink-0"
+                            title="Change hex color"
+                          />
+                          <input
+                            type="text"
+                            value={color.name}
+                            onChange={(e) => handleUpdateColor(idx, 'name', e.target.value)}
+                            className="flex-1 text-xs font-bold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-orange-500 focus:outline-none"
+                            placeholder="Color Name"
+                          />
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {color.hex}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveColor(idx)}
+                          className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                          title="Remove color"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Key Features Bullet Points Manager */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                      <ListChecks className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900">
+                        Key Features Bullet Points ({formFeatures.length})
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        প্রোডাক্টের মূল আকর্ষণ ও ফিচারসমূহ যা চেকমার্কে দেখা যাবে।
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Feature Suggestions */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Quick 1-Click Feature Suggestions:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {FEATURE_SUGGESTIONS.map((featText) => (
+                      <button
+                        key={featText}
+                        type="button"
+                        onClick={() => handleAddFeature(featText)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-lg text-[11px] font-medium text-slate-700 transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-2.5 h-2.5 text-emerald-600" />
+                        <span>{featText}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Feature Input Bar */}
+                <div className="flex items-center gap-2 pt-1 border-t border-slate-200/60">
+                  <input
+                    type="text"
+                    value={newFeatureText}
+                    onChange={(e) => setNewFeatureText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddFeature();
+                      }
+                    }}
+                    placeholder="Enter custom key feature (e.g. Active Noise Cancellation dual mics)"
+                    className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddFeature()}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Feature</span>
+                  </button>
+                </div>
+
+                {/* Current Features List */}
+                {formFeatures.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic bg-white p-2.5 rounded-lg border border-dashed border-slate-200 text-center">
+                    No features added yet. Click one of the quick suggestions above or write your own.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5 pt-1">
+                    {formFeatures.map((feat, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200 shadow-2xs"
+                      >
+                        <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <input
+                          type="text"
+                          value={feat}
+                          onChange={(e) => handleUpdateFeature(idx, e.target.value)}
+                          className="flex-1 text-xs font-medium text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-emerald-500 focus:outline-none"
+                          placeholder="Feature description"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFeature(idx)}
+                          className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                          title="Remove feature"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Technical Specifications Manager */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                      <Sliders className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900">
+                        Technical Specifications ({formSpecs.length})
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        টেকনিক্যাল স্পেসিফিকেশন টেবিল (Driver Size, Water Resistance, Charging Time ইত্যাদি)।
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Spec Suggestions */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Quick 1-Click Spec Suggestions:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SPEC_SUGGESTIONS.map((specPreset) => (
+                      <button
+                        key={specPreset.key}
+                        type="button"
+                        onClick={() => handleAddSpec(specPreset.key, specPreset.value)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-[11px] font-medium text-slate-700 transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-2.5 h-2.5 text-blue-600" />
+                        <span>
+                          {specPreset.key}: <b className="text-slate-900">{specPreset.value}</b>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Spec Input Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 pt-1 border-t border-slate-200/60">
+                  <div className="sm:col-span-2">
+                    <input
+                      type="text"
+                      value={newSpecKey}
+                      onChange={(e) => setNewSpecKey(e.target.value)}
+                      placeholder="Spec Name (e.g. Driver Size)"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <input
+                      type="text"
+                      value={newSpecVal}
+                      onChange={(e) => setNewSpecVal(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddSpec();
+                        }
+                      }}
+                      placeholder="Spec Value (e.g. 13mm Titanium Dynamic)"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                    />
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => handleAddSpec()}
+                      className="w-full h-full py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Spec</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Current Specs List */}
+                {formSpecs.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic bg-white p-2.5 rounded-lg border border-dashed border-slate-200 text-center">
+                    No technical specs added yet. Click a suggestion above or enter your own key and value.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden bg-white">
+                    {formSpecs.map((spec, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 p-2 hover:bg-slate-50 transition-colors"
+                      >
+                        <input
+                          type="text"
+                          value={spec.key}
+                          onChange={(e) => handleUpdateSpec(idx, 'key', e.target.value)}
+                          className="w-1/3 text-xs font-bold text-slate-700 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none px-1"
+                          placeholder="Spec Name"
+                        />
+                        <span className="text-slate-400 font-bold">:</span>
+                        <input
+                          type="text"
+                          value={spec.value}
+                          onChange={(e) => handleUpdateSpec(idx, 'value', e.target.value)}
+                          className="flex-1 text-xs font-medium text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none px-1"
+                          placeholder="Spec Value"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSpec(idx)}
+                          className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                          title="Remove spec"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Additional Gallery Photos Manager */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900">
+                        Product Photo Gallery ({formGallery.length} Images)
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        একাধিক ছবি, বিভিন্ন অ্যাঙ্গেল বা বক্স আনবক্সিং ফটো যুক্ত করুন। Google Drive বা ডিরেক্ট লিংক দিন।
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Add Photo Input */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newGalleryUrl}
+                    onChange={(e) => setNewGalleryUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddGalleryPhoto();
+                      }
+                    }}
+                    placeholder="Paste Google Drive share link or image URL for additional angle"
+                    className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddGalleryPhoto}
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Photo</span>
+                  </button>
+                </div>
+
+                {/* Gallery Thumbnails List */}
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1">
+                  {formGallery.map((imgUrl, idx) => {
+                    const isCover = formImage === imgUrl || (idx === 0 && !formImage);
+                    return (
+                      <div
+                        key={idx}
+                        className={`relative group rounded-lg overflow-hidden border bg-white ${
+                          isCover ? 'ring-2 ring-orange-500 border-orange-500' : 'border-slate-200'
+                        }`}
+                      >
+                        <img
+                          src={imgUrl}
+                          alt={`photo ${idx}`}
+                          className="w-full h-16 object-cover bg-slate-100"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800';
+                          }}
+                        />
+
+                        {isCover && (
+                          <span className="absolute top-1 left-1 bg-orange-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-2xs">
+                            Cover
+                          </span>
+                        )}
+
+                        <div className="absolute inset-0 bg-slate-900/70 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1 transition-opacity">
+                          {!isCover && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetPrimaryGalleryPhoto(imgUrl)}
+                              className="px-1.5 py-0.5 bg-orange-600 hover:bg-orange-700 text-white text-[9px] font-bold rounded cursor-pointer"
+                              title="Set as Main Cover Photo"
+                            >
+                              Cover
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGalleryPhoto(idx)}
+                            className="p-1 bg-red-600 hover:bg-red-700 text-white rounded cursor-pointer"
+                            title="Remove photo"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
