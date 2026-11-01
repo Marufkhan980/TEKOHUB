@@ -27,8 +27,8 @@ export function generateGoogleSitesEmbedHtml(
       specs: p.specs || {},
       colors: p.colors || [],
       warranty: p.warranty || 'Official Warranty & 7 Days Replacement',
-      inStock: p.inStock !== false,
-      stockQuantity: p.stockQuantity || 35,
+      inStock: p.inStock !== false && (p.stockQuantity === undefined || p.stockQuantity > 0),
+      stockQuantity: p.stockQuantity !== undefined ? p.stockQuantity : (p.inStock ? 35 : 0),
       rating: p.rating || 4.8,
       reviewsCount: p.reviewsCount || 45
     }))

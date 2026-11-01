@@ -284,6 +284,50 @@ export const ProductManagerModal: React.FC<ProductManagerModalProps> = ({
     setTimeout(() => setToast(null), 3000);
   };
 
+  // Inline Stock Quantity Adjuster Handlers (Instant Firestore sync)
+  const handleQuickStockChange = async (p: Product, delta: number) => {
+    const currentQty = p.stockQuantity !== undefined ? p.stockQuantity : (p.inStock ? 30 : 0);
+    const newQty = Math.max(0, currentQty + delta);
+    const newInStock = newQty > 0;
+    const updatedProduct: Product = {
+      ...p,
+      stockQuantity: newQty,
+      inStock: newInStock
+    };
+
+    const updatedList = products.map((item) => (item.id === p.id ? updatedProduct : item));
+    onUpdateProducts(updatedList);
+
+    try {
+      await saveProductToFirestore(updatedProduct);
+      showToast(`Stock updated: "${p.title}" (${newQty} units in stock)`);
+    } catch (err: any) {
+      console.error('Failed to update stock in Firestore:', err);
+      showToast(`Stock save error: ${err.message || 'Permission denied'}`);
+    }
+  };
+
+  const handleQuickStockInput = async (p: Product, newQtyInput: number) => {
+    const newQty = Math.max(0, newQtyInput);
+    const newInStock = newQty > 0;
+    const updatedProduct: Product = {
+      ...p,
+      stockQuantity: newQty,
+      inStock: newInStock
+    };
+
+    const updatedList = products.map((item) => (item.id === p.id ? updatedProduct : item));
+    onUpdateProducts(updatedList);
+
+    try {
+      await saveProductToFirestore(updatedProduct);
+      showToast(`Stock updated: "${p.title}" (${newQty} units)`);
+    } catch (err: any) {
+      console.error('Failed to update stock in Firestore:', err);
+      showToast(`Stock save error: ${err.message || 'Permission denied'}`);
+    }
+  };
+
   const startEditingProduct = (p: Product) => {
     setSelectedProduct(p);
     setFormError(null);
@@ -294,7 +338,7 @@ export const ProductManagerModal: React.FC<ProductManagerModalProps> = ({
     setFormCategory(p.category);
     setFormBadge(p.badge || '');
     setFormInStock(p.inStock);
-    setFormStockQuantity(p.stockQuantity || 30);
+    setFormStockQuantity(p.stockQuantity !== undefined ? p.stockQuantity : (p.inStock ? 30 : 0));
     setFormWarranty(p.warranty || '3 Months Replacement Warranty');
     setFormImage(p.image);
     setFormGallery(p.gallery || [p.image]);
@@ -867,7 +911,7 @@ export const ProductManagerModal: React.FC<ProductManagerModalProps> = ({
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-3 mt-1 text-xs">
+                      <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs">
                         <span className="font-bold text-orange-600">
                           ৳{p.price.toLocaleString()}
                         </span>
@@ -876,9 +920,49 @@ export const ProductManagerModal: React.FC<ProductManagerModalProps> = ({
                             ৳{p.originalPrice.toLocaleString()}
                           </span>
                         )}
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded ${p.inStock ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'}`}>
-                          {p.inStock ? `In Stock (${p.stockQuantity || 30})` : 'Stock Out'}
-                        </span>
+
+                        {/* Inline Stock Quantity Quick Adjuster */}
+                        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/90 rounded-lg px-2 py-0.5">
+                          <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+                            Stock:
+                          </span>
+                          <div className="flex items-center border border-slate-300 rounded bg-white shadow-2xs">
+                            <button
+                              type="button"
+                              onClick={() => handleQuickStockChange(p, -1)}
+                              disabled={(p.stockQuantity !== undefined ? p.stockQuantity : (p.inStock ? 30 : 0)) <= 0}
+                              className="w-5 h-5 flex items-center justify-center text-slate-700 hover:bg-slate-100 disabled:opacity-30 text-xs font-black cursor-pointer"
+                              title="1 কম কমান"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              min="0"
+                              value={p.stockQuantity !== undefined ? p.stockQuantity : (p.inStock ? 30 : 0)}
+                              onChange={(e) => handleQuickStockInput(p, parseInt(e.target.value) || 0)}
+                              className="w-12 text-center text-xs font-bold py-0.5 border-x border-slate-200 text-slate-900 bg-white outline-none"
+                              title="সরাসরি স্টক সংখ্যা লিখুন"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleQuickStockChange(p, 1)}
+                              className="w-5 h-5 flex items-center justify-center text-slate-700 hover:bg-slate-100 text-xs font-black cursor-pointer"
+                              title="1 টি বাড়ান"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                            p.inStock && (p.stockQuantity !== undefined ? p.stockQuantity : 30) > 0
+                              ? 'text-emerald-700 bg-emerald-100'
+                              : 'text-red-700 bg-red-100'
+                          }`}>
+                            {p.inStock && (p.stockQuantity !== undefined ? p.stockQuantity : 30) > 0
+                              ? 'In Stock'
+                              : 'Stock Out'}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -1079,33 +1163,74 @@ export const ProductManagerModal: React.FC<ProductManagerModalProps> = ({
                   />
                 </div>
 
-                {/* Stock & Warranty */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Stock Availability
-                  </label>
-                  <div className="flex items-center gap-4 py-2">
-                    <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="stock"
-                        checked={formInStock}
-                        onChange={() => setFormInStock(true)}
-                        className="text-orange-600 focus:ring-orange-500"
-                      />
-                      <span>In Stock</span>
+                {/* Stock Quantity & Availability */}
+                <div className="bg-slate-50 border border-slate-200/90 p-3.5 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-800">
+                      📦 Stock Quantity (কয়টা স্টক আছে) *
                     </label>
-                    <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="stock"
-                        checked={!formInStock}
-                        onChange={() => setFormInStock(false)}
-                        className="text-orange-600 focus:ring-orange-500"
-                      />
-                      <span>Stock Out</span>
-                    </label>
+                    <span className="text-[10px] text-slate-500 font-semibold">
+                      Number of units left
+                    </span>
                   </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        value={formStockQuantity}
+                        onChange={(e) => {
+                          const val = Math.max(0, parseInt(e.target.value) || 0);
+                          setFormStockQuantity(val);
+                          if (val === 0) {
+                            setFormInStock(false);
+                          } else if (!formInStock && val > 0) {
+                            setFormInStock(true);
+                          }
+                        }}
+                        className="w-32 px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 shadow-xs"
+                        placeholder="e.g. 50"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                        units
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-2xs">
+                      <label className="flex items-center gap-1.5 text-xs font-bold text-slate-800 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="stock"
+                          checked={formInStock}
+                          onChange={() => {
+                            setFormInStock(true);
+                            if (formStockQuantity <= 0) setFormStockQuantity(10);
+                          }}
+                          className="text-orange-600 focus:ring-orange-500"
+                        />
+                        <span className="text-emerald-700">In Stock</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs font-bold text-slate-800 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="stock"
+                          checked={!formInStock}
+                          onChange={() => {
+                            setFormInStock(false);
+                            setFormStockQuantity(0);
+                          }}
+                          className="text-orange-600 focus:ring-orange-500"
+                        />
+                        <span className="text-red-600">Stock Out</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <p className="text-[10.5px] text-slate-500 leading-tight">
+                    💡 স্টক ০ (zero) হলে অটোমেটিক 'Stock Out' হবে এবং কাস্টমার অর্ডার করতে পারবে না।
+                  </p>
                 </div>
 
                 <div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle2, MessageCircle, Printer, ShoppingBag, ArrowRight, ShieldCheck, Copy, Check } from 'lucide-react';
 import { Order, StoreConfig } from '../types';
-import { formatWhatsAppOrderMessage, generateWhatsAppOrderUrl } from '../utils/whatsapp';
+import { formatWhatsAppOrderMessage, generateWhatsAppOrderUrl, generateFacebookMessengerUrl } from '../utils/whatsapp';
 
 interface OrderSuccessModalProps {
   order: Order | null;
@@ -15,6 +15,8 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   config
 }) => {
   const [copied, setCopied] = React.useState(false);
+  const [fbCopied, setFbCopied] = React.useState(false);
+  const [showOrderTextPreview, setShowOrderTextPreview] = React.useState(false);
 
   if (!order) return null;
 
@@ -39,6 +41,18 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
     navigator.clipboard.writeText(order.id);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleFacebookMessengerOrder = () => {
+    try {
+      navigator.clipboard.writeText(waMsg);
+      setFbCopied(true);
+      setTimeout(() => setFbCopied(false), 4000);
+    } catch (err) {
+      console.warn('Clipboard write error', err);
+    }
+    const fbUrl = generateFacebookMessengerUrl(config.facebookUrl);
+    window.open(fbUrl, '_blank');
   };
 
   return (
@@ -166,20 +180,66 @@ export const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
             </a>
 
             <button
-              onClick={() => {
-                navigator.clipboard.writeText(waMsg);
-                window.open('https://m.me/tekohub99', '_blank');
-              }}
-              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+              onClick={handleFacebookMessengerOrder}
+              className={`w-full py-3 px-4 rounded-xl text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${
+                fbCopied ? 'bg-emerald-600 shadow-emerald-600/20' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
+              }`}
             >
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                <path d="M12 2C6.36 2 2 6.13 2 11.7c0 2.91 1.19 5.43 3.16 7.15V22l3.05-1.68c1.19.33 2.45.51 3.79.51 5.64 0 10-4.13 10-9.7S17.64 2 12 2zm1.05 13.04l-2.61-2.78-5.1 2.78 5.61-5.95 2.68 2.78 5.03-2.78-5.61 5.95z"/>
-              </svg>
-              <span>Order on Facebook Inbox</span>
+              {fbCopied ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-200" />
+                  <span>অর্ডার মেসেজ কপি হয়েছে! ওপেন হচ্ছে মেসেঞ্জার...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M12 2C6.36 2 2 6.13 2 11.7c0 2.91 1.19 5.43 3.16 7.15V22l3.05-1.68c1.19.33 2.45.51 3.79.51 5.64 0 10-4.13 10-9.7S17.64 2 12 2zm1.05 13.04l-2.61-2.78-5.1 2.78 5.61-5.95 2.68 2.78 5.03-2.78-5.61 5.95z"/>
+                  </svg>
+                  <span>Order on Facebook Messenger</span>
+                </>
+              )}
             </button>
 
-            <p className="text-center text-[11px] text-slate-500 font-medium">
-              If WhatsApp is unavailable, you can also order via our Facebook Page.
+            {fbCopied && (
+              <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-xs font-semibold text-center animate-fade-in">
+                📋 সম্পূর্ণ অর্ডারের তথ্য কপি করা হয়েছে! মেসেঞ্জারে গিয়ে চ্যাট বক্সে <b>Paste (Ctrl+V)</b> করে Send করলেই দোকানদার অর্ডার পেয়ে যাবেন।
+              </div>
+            )}
+
+            {/* Expandable Order Text Preview */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setShowOrderTextPreview(!showOrderTextPreview)}
+                className="text-[11px] text-slate-500 hover:text-slate-800 underline block mx-auto cursor-pointer"
+              >
+                {showOrderTextPreview ? 'Hide formatted order text' : '📋 View / Copy Formatted Order Text'}
+              </button>
+
+              {showOrderTextPreview && (
+                <div className="mt-2 p-3 bg-slate-900 text-slate-200 rounded-xl text-[11px] font-mono whitespace-pre-wrap relative border border-slate-700">
+                  <div className="flex justify-between items-center mb-1 pb-1 border-b border-slate-700 text-slate-400">
+                    <span className="text-[10px] uppercase font-bold text-slate-300">Formatted Invoice Text:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(waMsg);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                      className="text-[10px] text-orange-400 hover:text-orange-300 flex items-center gap-1 font-bold cursor-pointer"
+                    >
+                      {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copied ? 'Copied!' : 'Copy Text'}</span>
+                    </button>
+                  </div>
+                  {waMsg}
+                </div>
+              )}
+            </div>
+
+            <p className="text-center text-[10px] text-slate-500 font-medium">
+              If WhatsApp is unavailable, you can also order via our Facebook Messenger.
             </p>
           </div>
 

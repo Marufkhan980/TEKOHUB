@@ -18,6 +18,11 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Product } from '../types';
+import {
+  formatSingleProductOrderMessage,
+  generateFacebookMessengerUrl,
+  generateWhatsAppOrderUrl
+} from '../utils/whatsapp';
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -75,12 +80,28 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
-  const cleanWa = whatsappNumber.replace(/[^0-9]/g, '');
-  const waOrderMsg = encodeURIComponent(
-    `Hello TEKOHUB! 👋\nI want to order:\n*${product.title}*\n${
-      selectedColor ? `Color: ${selectedColor}\n` : ''
-    }Quantity: ${quantity}\nPrice: ৳${(product.price * quantity).toLocaleString()}\n\nPlease tell me the delivery procedure.`
-  );
+  const [fbCopied, setFbCopied] = useState(false);
+
+  const formattedProductMessage = formatSingleProductOrderMessage({
+    product,
+    quantity,
+    selectedColor,
+    storeName: 'TEKOHUB'
+  });
+
+  const waUrl = generateWhatsAppOrderUrl(whatsappNumber, formattedProductMessage);
+
+  const handleFacebookOrder = () => {
+    try {
+      navigator.clipboard.writeText(formattedProductMessage);
+      setFbCopied(true);
+      setTimeout(() => setFbCopied(false), 4000);
+    } catch (err) {
+      console.warn('Clipboard write failed:', err);
+    }
+    const fbUrl = generateFacebookMessengerUrl();
+    window.open(fbUrl, '_blank');
+  };
 
   // Handle local file upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -566,7 +587,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {/* Direct WhatsApp & Facebook Orders */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <a
-                  href={`https://wa.me/${cleanWa}?text=${waOrderMsg}`}
+                  href={waUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs"
@@ -577,18 +598,32 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(`Hello TEKOHUB! I would like to order: ${product.title} (৳${product.price})`);
-                    window.open('https://m.me/tekohub99', '_blank');
-                  }}
-                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  onClick={handleFacebookOrder}
+                  className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg text-white text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                    fbCopied ? 'bg-emerald-600' : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 >
-                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                    <path d="M12 2C6.36 2 2 6.13 2 11.7c0 2.91 1.19 5.43 3.16 7.15V22l3.05-1.68c1.19.33 2.45.51 3.79.51 5.64 0 10-4.13 10-9.7S17.64 2 12 2zm1.05 13.04l-2.61-2.78-5.1 2.78 5.61-5.95 2.68 2.78 5.03-2.78-5.61 5.95z"/>
-                  </svg>
-                  <span>Order on Facebook Inbox</span>
+                  {fbCopied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-200" />
+                      <span>Copied! Opening Chat...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 2C6.36 2 2 6.13 2 11.7c0 2.91 1.19 5.43 3.16 7.15V22l3.05-1.68c1.19.33 2.45.51 3.79.51 5.64 0 10-4.13 10-9.7S17.64 2 12 2zm1.05 13.04l-2.61-2.78-5.1 2.78 5.61-5.95 2.68 2.78 5.03-2.78-5.61 5.95z"/>
+                      </svg>
+                      <span>Order on Facebook Inbox</span>
+                    </>
+                  )}
                 </button>
               </div>
+
+              {fbCopied && (
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-900 text-[11px] font-semibold text-center animate-fade-in">
+                  📋 অর্ডারের সুন্দর মেসেজ কপি হয়েছে! ফেসবুক মেসেঞ্জারে গিয়ে চ্যাটে <b>Paste (Ctrl+V)</b> করে Send করুন।
+                </div>
+              )}
 
               <p className="text-center text-[10px] text-slate-500 font-medium">
                 If WhatsApp is unavailable, you can also order via our Facebook Page.

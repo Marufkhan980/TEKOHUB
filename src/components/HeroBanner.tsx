@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Truck, Headphones, BadgePercent, Zap, Sparkles } from 'lucide-react';
+import { ShieldCheck, Truck, Headphones, BadgePercent, Zap } from 'lucide-react';
 
 interface HeroBannerProps {
   activeCategory: string;
@@ -123,11 +123,6 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               </button>
             );
           })}
-        </div>
-
-        <div className="hidden sm:flex items-center gap-1 text-xs text-slate-500 shrink-0">
-          <Sparkles className="w-3.5 h-3.5 text-orange-500" />
-          <span>Curated Tech</span>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
-import React from 'react';
-import { X, Trash2, ShoppingBag, ArrowRight, Truck, MessageCircle, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Trash2, ShoppingBag, ArrowRight, Truck, MessageCircle, ShieldCheck, Check } from 'lucide-react';
 import { CartItem } from '../types';
+import { formatCartOrderMessage, generateWhatsAppOrderUrl, generateFacebookMessengerUrl } from '../utils/whatsapp';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -41,16 +42,30 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   const totalItemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
-  const cleanWa = whatsappNumber.replace(/[^0-9]/g, '');
-  const itemsText = items
-    .map(
-      (item, i) =>
-        `${i + 1}. ${item.product.title}${item.selectedColor ? ` (${item.selectedColor})` : ''} x ${item.quantity} = ৳${item.product.price * item.quantity}`
-    )
-    .join('%0A');
-  const waCartMsg = `*🛒 TEKOHUB CART INQUIRY*%0A${itemsText}%0A%0A*Subtotal:* ৳${subtotal}%0A*Delivery Location:* ${
-    deliveryArea === 'dhaka' ? 'Inside Dhaka' : 'Outside Dhaka'
-  }%0AI would like to finalize this order!`;
+  const [fbCopied, setFbCopied] = useState(false);
+
+  const formattedCartMsg = formatCartOrderMessage({
+    items,
+    subtotal,
+    deliveryCharge: effectiveDelivery,
+    total: grandTotal,
+    deliveryArea,
+    storeName: 'TEKOHUB'
+  });
+
+  const waCartUrl = generateWhatsAppOrderUrl(whatsappNumber, formattedCartMsg);
+
+  const handleFacebookCartOrder = () => {
+    try {
+      navigator.clipboard.writeText(formattedCartMsg);
+      setFbCopied(true);
+      setTimeout(() => setFbCopied(false), 4000);
+    } catch (err) {
+      console.warn('Clipboard write failed:', err);
+    }
+    const fbUrl = generateFacebookMessengerUrl();
+    window.open(fbUrl, '_blank');
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -270,7 +285,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
                 <div className="grid grid-cols-2 gap-2">
                   <a
-                    href={`https://wa.me/${cleanWa}?text=${waCartMsg}`}
+                    href={waCartUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
@@ -281,18 +296,32 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(decodeURIComponent(waCartMsg));
-                      window.open('https://m.me/tekohub99', '_blank');
-                    }}
-                    className="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    onClick={handleFacebookCartOrder}
+                    className={`py-2.5 px-3 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                      fbCopied ? 'bg-emerald-600' : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
                   >
-                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                      <path d="M12 2C6.36 2 2 6.13 2 11.7c0 2.91 1.19 5.43 3.16 7.15V22l3.05-1.68c1.19.33 2.45.51 3.79.51 5.64 0 10-4.13 10-9.7S17.64 2 12 2zm1.05 13.04l-2.61-2.78-5.1 2.78 5.61-5.95 2.68 2.78 5.03-2.78-5.61 5.95z"/>
-                    </svg>
-                    <span>Order on Facebook</span>
+                    {fbCopied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-200" />
+                        <span>Copied! Opening...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                          <path d="M12 2C6.36 2 2 6.13 2 11.7c0 2.91 1.19 5.43 3.16 7.15V22l3.05-1.68c1.19.33 2.45.51 3.79.51 5.64 0 10-4.13 10-9.7S17.64 2 12 2zm1.05 13.04l-2.61-2.78-5.1 2.78 5.61-5.95 2.68 2.78 5.03-2.78-5.61 5.95z"/>
+                        </svg>
+                        <span>Order on Facebook</span>
+                      </>
+                    )}
                   </button>
                 </div>
+
+                {fbCopied && (
+                  <div className="p-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-900 text-[11px] font-semibold text-center animate-fade-in">
+                    📋 কার্টের সুন্দর মেসেজ কপি হয়েছে! ফেসবুকে পেস্ট (Ctrl+V) করে Send করুন।
+                  </div>
+                )}
 
                 <p className="text-center text-[10px] text-slate-500 font-medium">
                   If WhatsApp is unavailable, you can also order via our Facebook Page.
